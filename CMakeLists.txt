@@ -56,21 +56,53 @@ file(GLOB_RECURSE LOG_SOURCES CONFIGURE_DEPENDS
 )
 
 # Utils dependency
-if (NOT TARGET vix::utils AND NOT TARGET vix_utils AND NOT TARGET utils)
-  if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/utils/CMakeLists.txt")
-    message(STATUS "[log] Adding utils from local sibling: ./utils")
-    add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/utils" "utils")
-  elseif (EXISTS "${CMAKE_CURRENT_LIST_DIR}/../utils/CMakeLists.txt")
-    message(STATUS "[log] Adding utils from parent sibling: ../utils")
-    add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/../utils" "utils")
+set(VIX_UTILS_TARGET "")
+
+# 1) Reuse already available umbrella/local target
+if (TARGET vix::utils)
+  message(STATUS "[log] Using existing target vix::utils")
+  set(VIX_UTILS_TARGET vix::utils)
+
+elseif (TARGET vix_utils)
+  message(STATUS "[log] Using existing target vix_utils")
+  set(VIX_UTILS_TARGET vix_utils)
+
+elseif (TARGET utils)
+  message(STATUS "[log] Using existing target utils")
+  set(VIX_UTILS_TARGET utils)
+
+else()
+  # 2) Try local sibling layouts
+  get_filename_component(_VIX_MODULES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
+  set(_VIX_UTILS_DIR "${_VIX_MODULES_DIR}/utils")
+
+  if (EXISTS "${_VIX_UTILS_DIR}/CMakeLists.txt")
+    message(STATUS "[log] Adding local sibling utils: ${_VIX_UTILS_DIR}")
+    add_subdirectory("${_VIX_UTILS_DIR}" "${CMAKE_BINARY_DIR}/_vix_utils")
   endif()
 
-  if (NOT TARGET vix::utils AND NOT TARGET vix_utils AND NOT TARGET utils)
+  if (TARGET vix::utils)
+    set(VIX_UTILS_TARGET vix::utils)
+  elseif (TARGET vix_utils)
+    set(VIX_UTILS_TARGET vix_utils)
+  elseif (TARGET utils)
+    set(VIX_UTILS_TARGET utils)
+  else()
+    # 3) Try installed packages
     find_package(vix_utils CONFIG QUIET)
     find_package(utils CONFIG QUIET)
+
+    if (TARGET vix::utils)
+      set(VIX_UTILS_TARGET vix::utils)
+    elseif (TARGET vix_utils)
+      set(VIX_UTILS_TARGET vix_utils)
+    elseif (TARGET utils)
+      set(VIX_UTILS_TARGET utils)
+    endif()
   endif()
 
-  if (NOT TARGET vix::utils AND NOT TARGET vix_utils AND NOT TARGET utils AND VIX_LOG_FETCH_UTILS)
+  # 4) Optional fetch only as last resort
+  if (NOT VIX_UTILS_TARGET AND VIX_LOG_FETCH_UTILS)
     include(FetchContent)
     message(STATUS "[log] Fetching vix::utils via FetchContent")
     FetchContent_Declare(vix_utils
@@ -78,24 +110,24 @@ if (NOT TARGET vix::utils AND NOT TARGET vix_utils AND NOT TARGET utils)
       GIT_TAG        v0.1.0
     )
     FetchContent_MakeAvailable(vix_utils)
-  endif()
-endif()
 
-set(VIX_UTILS_TARGET "")
-if (TARGET vix::utils)
-  set(VIX_UTILS_TARGET vix::utils)
-elseif (TARGET vix_utils)
-  set(VIX_UTILS_TARGET vix_utils)
-elseif (TARGET utils)
-  set(VIX_UTILS_TARGET utils)
+    if (TARGET vix::utils)
+      set(VIX_UTILS_TARGET vix::utils)
+    elseif (TARGET vix_utils)
+      set(VIX_UTILS_TARGET vix_utils)
+    elseif (TARGET utils)
+      set(VIX_UTILS_TARGET utils)
+    endif()
+  endif()
 endif()
 
 if (NOT VIX_UTILS_TARGET)
   message(FATAL_ERROR
     "vix::utils not found.\n"
-    "Searched in ./utils, ../utils, installed packages (vix_utils / utils), "
-    "and optional FetchContent.\n"
-    "Provide utils in the umbrella build, or install/export the utils package."
+    "Expected one of:\n"
+    "  - existing target: vix::utils / vix_utils / utils\n"
+    "  - local sibling module in ../utils\n"
+    "  - installed package via find_package(vix_utils CONFIG) or find_package(utils CONFIG)\n"
   )
 endif()
 
