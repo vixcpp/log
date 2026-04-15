@@ -57,38 +57,39 @@ file(GLOB_RECURSE LOG_SOURCES CONFIGURE_DEPENDS
 # Utils dependency
 option(VIX_LOG_FETCH_UTILS "Auto-fetch vix::utils if missing" ON)
 
-if (DEFINED VIX_UMBRELLA_BUILD AND VIX_UMBRELLA_BUILD)
-  if (NOT TARGET vix::utils)
-    message(FATAL_ERROR "[log] Umbrella build: vix::utils must be provided by umbrella before log.")
+if (NOT TARGET vix::utils AND NOT TARGET vix_utils)
+  if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/../utils/CMakeLists.txt")
+    message(STATUS "[log] Adding utils from sibling: ../utils")
+    add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/../utils" "utils")
+  else()
+    find_package(vix_utils CONFIG QUIET)
+    find_package(utils CONFIG QUIET)
   endif()
-else()
-  if (NOT TARGET vix::utils)
-    if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/../utils/CMakeLists.txt")
-      message(STATUS "[log] Adding utils from umbrella: ../utils")
-      add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/../utils" "utils")
-    else()
-      find_package(vix_utils CONFIG QUIET)
-    endif()
 
-    if (NOT TARGET vix::utils)
-      if (VIX_LOG_FETCH_UTILS)
-        include(FetchContent)
-        message(STATUS "[log] Fetching vix::utils via FetchContent")
-        FetchContent_Declare(vix_utils
-          GIT_REPOSITORY https://github.com/vixcpp/utils.git
-          GIT_TAG        v0.1.0
-        )
-        FetchContent_MakeAvailable(vix_utils)
-      else()
-        message(FATAL_ERROR
-          "vix::utils not found. Enable VIX_LOG_FETCH_UTILS=ON, install vix_utils, or provide the target before log."
-        )
-      endif()
-    endif()
+  if (NOT TARGET vix::utils AND NOT TARGET vix_utils AND VIX_LOG_FETCH_UTILS)
+    include(FetchContent)
+    message(STATUS "[log] Fetching vix::utils via FetchContent")
+    FetchContent_Declare(vix_utils
+      GIT_REPOSITORY https://github.com/vixcpp/utils.git
+      GIT_TAG        v0.1.0
+    )
+    FetchContent_MakeAvailable(vix_utils)
   endif()
 endif()
 
-set(VIX_UTILS_TARGET vix::utils)
+set(VIX_UTILS_TARGET "")
+if (TARGET vix::utils)
+  set(VIX_UTILS_TARGET vix::utils)
+elseif (TARGET vix_utils)
+  set(VIX_UTILS_TARGET vix_utils)
+endif()
+
+if (NOT VIX_UTILS_TARGET)
+  message(FATAL_ERROR
+    "vix::utils not found.\n"
+    "Provide ../utils, install/export the utils package, or enable VIX_LOG_FETCH_UTILS."
+  )
+endif()
 
 # STATIC
 if (LOG_SOURCES)
