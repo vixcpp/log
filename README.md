@@ -7,8 +7,6 @@ It is built as a **facade** over the internal `vix::utils::Logger`,
 exposing a consistent and developer-friendly interface while reusing
 a powerful logging backend.
 
----
-
 ## Philosophy
 
 Logging in Vix follows strict principles:
@@ -27,8 +25,6 @@ The module is designed to be:
 - stable across versions
 - consistent across all Vix modules
 
----
-
 ## Architecture
 
 ```
@@ -38,8 +34,6 @@ vix::log           → public facade (this module)
 
 The `log` module does not implement logging itself.
 It delegates all operations to `vix::utils::Logger`.
-
----
 
 ## Quick Start
 
@@ -53,8 +47,6 @@ int main()
   vix::log::error("Failed to open file");
 }
 ```
-
----
 
 ## Log Levels
 
@@ -72,8 +64,6 @@ Available levels:
 - Critical
 - Off
 
----
-
 ## Structured Logging
 
 ```cpp
@@ -86,8 +76,6 @@ vix::log::logf(
 );
 ```
 
----
-
 ## Output Formats
 
 ```cpp
@@ -95,8 +83,6 @@ vix::log::set_format(vix::log::LogFormat::KV);
 vix::log::set_format(vix::log::LogFormat::JSON);
 vix::log::set_format(vix::log::LogFormat::JSON_PRETTY);
 ```
-
----
 
 ## Context (Thread-Local)
 
@@ -115,8 +101,6 @@ vix::log::info("user logged in");
 vix::log::clear_context();
 ```
 
----
-
 ## Configuration
 
 ```cpp
@@ -128,16 +112,12 @@ config.async = true;
 vix::log::configure(config);
 ```
 
----
-
 ## Environment Configuration
 
 ```cpp
 vix::log::set_level_from_env();   // VIX_LOG_LEVEL
 vix::log::set_format_from_env();  // VIX_LOG_FORMAT
 ```
-
----
 
 ## Examples
 
@@ -146,8 +126,6 @@ Located in `examples/`:
 - basic.cpp → basic logging
 - context.cpp → context usage
 - format.cpp → format switching
-
----
 
 ## Tests
 
@@ -161,8 +139,6 @@ Run:
 ctest
 ```
 
----
-
 ## Dependencies
 
 This module depends on:
@@ -170,8 +146,6 @@ This module depends on:
 - `vix::utils` (logging backend)
 
 No direct dependency on spdlog is exposed publicly.
-
----
 
 ## Design Goals Recap
 
@@ -181,8 +155,6 @@ No direct dependency on spdlog is exposed publicly.
 - Context-aware
 - High performance
 - Stable interface
-
----
 
 ## License
 

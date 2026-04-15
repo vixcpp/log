@@ -1,0 +1,299 @@
+name: Log Cross Platform CI
+
+on:
+  push:
+    branches: [main, master, dev]
+    paths:
+      - ".github/workflows/log-cross-platform-ci.yml"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "include/**"
+      - "src/**"
+      - "test/**"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "vix.json"
+  pull_request:
+    branches: [main, master, dev]
+    paths:
+      - ".github/workflows/log-cross-platform-ci.yml"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "include/**"
+      - "src/**"
+      - "test/**"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "vix.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BUILD_JOBS: 2
+  VIX_GIT_BRANCH: dev
+
+jobs:
+  build-test-package:
+    name: build test package (${{ matrix.os }} / ${{ matrix.build_type }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            build_type: Debug
+
+          - os: ubuntu-24.04
+            build_type: Release
+
+          - os: macos-14
+            build_type: Debug
+
+          - os: macos-15-intel
+            build_type: Release
+
+          - os: windows-2022
+            build_type: Debug
+
+          - os: windows-2022
+            build_type: Release
+
+    steps:
+      - name: Checkout log repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout utils dependency
+        uses: actions/checkout@v4
+        with:
+          repository: vixcpp/utils
+          ref: ${{ env.VIX_GIT_BRANCH }}
+          path: utils
+          fetch-depth: 0
+
+      - name: Setup CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            ninja-build \
+            pkg-config \
+            git
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          brew update
+          brew install ninja || true
+
+      - name: Configure and build utils (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cmake -S utils -B utils/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_INSTALL_PREFIX="$PWD/stage"
+          cmake --build utils/build --parallel ${BUILD_JOBS}
+          cmake --install utils/build
+
+      - name: Configure and build utils (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake -S utils -B utils/build `
+            -DCMAKE_INSTALL_PREFIX="$PWD/stage"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          cmake --build utils/build --config ${{ matrix.build_type }} --parallel $env:BUILD_JOBS
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          cmake --install utils/build --config ${{ matrix.build_type }}
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Configure log (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DVIX_LOG_BUILD_TESTS=ON \
+            -DVIX_LOG_FETCH_UTILS=OFF \
+            -DCMAKE_PREFIX_PATH="$PWD/stage" \
+            -DCMAKE_INSTALL_PREFIX="$PWD/stage"
+
+      - name: Configure log (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake -S . -B build `
+            -DVIX_LOG_BUILD_TESTS=ON `
+            -DVIX_LOG_FETCH_UTILS=OFF `
+            -DCMAKE_PREFIX_PATH="$PWD/stage" `
+            -DCMAKE_INSTALL_PREFIX="$PWD/stage"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build log (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cmake --build build --parallel ${BUILD_JOBS}
+
+      - name: Build log (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake --build build --config ${{ matrix.build_type }} --parallel $env:BUILD_JOBS
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run tests (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ctest --test-dir build --output-on-failure
+
+      - name: Run tests (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ctest --test-dir build -C ${{ matrix.build_type }} --output-on-failure
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Install log (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cmake --install build
+
+      - name: Install log (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake --install build --config ${{ matrix.build_type }}
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Package smoke test (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          mkdir -p smoke
+          cat > smoke/CMakeLists.txt <<'EOF'
+          cmake_minimum_required(VERSION 3.20)
+          project(log_smoke LANGUAGES CXX)
+
+          set(CMAKE_CXX_STANDARD 20)
+          set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+          find_package(vix_log CONFIG REQUIRED)
+
+          add_executable(log_smoke main.cpp)
+          target_link_libraries(log_smoke PRIVATE vix::log)
+          EOF
+
+          cat > smoke/main.cpp <<'EOF'
+          #include <iostream>
+
+          int main()
+          {
+            std::cout << "vix::log package found\n";
+            return 0;
+          }
+          EOF
+
+          cmake -S smoke -B smoke/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_PREFIX_PATH="$PWD/stage"
+          cmake --build smoke/build --parallel ${BUILD_JOBS}
+
+      - name: Package smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path smoke | Out-Null
+
+          @"
+          cmake_minimum_required(VERSION 3.20)
+          project(log_smoke LANGUAGES CXX)
+
+          set(CMAKE_CXX_STANDARD 20)
+          set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+          find_package(vix_log CONFIG REQUIRED)
+
+          add_executable(log_smoke main.cpp)
+          target_link_libraries(log_smoke PRIVATE vix::log)
+          "@ | Out-File -FilePath smoke/CMakeLists.txt -Encoding utf8
+
+          @"
+          #include <iostream>
+
+          int main()
+          {
+            std::cout << "vix::log package found\n";
+            return 0;
+          }
+          "@ | Out-File -FilePath smoke/main.cpp -Encoding utf8
+
+          cmake -S smoke -B smoke/build `
+            -DCMAKE_PREFIX_PATH="$PWD/stage"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          cmake --build smoke/build --config ${{ matrix.build_type }} --parallel $env:BUILD_JOBS
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Collect logs
+        if: failure()
+        shell: bash
+        run: |
+          mkdir -p logs
+
+          cp -f build/CMakeCache.txt logs/ 2>/dev/null || true
+          cp -f build/CMakeFiles/CMakeOutput.log logs/ 2>/dev/null || true
+          cp -f build/CMakeFiles/CMakeError.log logs/ 2>/dev/null || true
+          cp -f build/CMakeFiles/CMakeConfigureLog.yaml logs/ 2>/dev/null || true
+
+          cp -f utils/build/CMakeCache.txt logs/utils_CMakeCache.txt 2>/dev/null || true
+          cp -f utils/build/CMakeFiles/CMakeOutput.log logs/utils_CMakeOutput.log 2>/dev/null || true
+          cp -f utils/build/CMakeFiles/CMakeError.log logs/utils_CMakeError.log 2>/dev/null || true
+          cp -f utils/build/CMakeFiles/CMakeConfigureLog.yaml logs/utils_CMakeConfigureLog.yaml 2>/dev/null || true
+
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: log-logs-${{ matrix.os }}-${{ matrix.build_type }}
+          path: logs/*
+          if-no-files-found: warn
+
+  summary:
+    name: Log Cross Platform CI Summary
+    needs: [build-test-package]
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Print summary
+        shell: bash
+        run: |
+          echo "Log cross-platform CI completed."
+          echo "- Linux build and test"
+          echo "- macOS build and test"
+          echo "- Windows build and test"
+          echo "- install verification"
+          echo "- find_package(vix_log) smoke test"

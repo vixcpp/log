@@ -66,16 +66,24 @@ else()
     if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/../utils/CMakeLists.txt")
       message(STATUS "[log] Adding utils from umbrella: ../utils")
       add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/../utils" "utils")
-    elseif (VIX_LOG_FETCH_UTILS)
-      include(FetchContent)
-      message(STATUS "[log] Fetching vix::utils via FetchContent")
-      FetchContent_Declare(vix_utils
-        GIT_REPOSITORY https://github.com/vixcpp/utils.git
-        GIT_TAG        v0.1.0
-      )
-      FetchContent_MakeAvailable(vix_utils)
     else()
-      message(FATAL_ERROR "vix::utils not found. Enable VIX_LOG_FETCH_UTILS=ON or provide the target before log.")
+      find_package(vix_utils CONFIG QUIET)
+    endif()
+
+    if (NOT TARGET vix::utils)
+      if (VIX_LOG_FETCH_UTILS)
+        include(FetchContent)
+        message(STATUS "[log] Fetching vix::utils via FetchContent")
+        FetchContent_Declare(vix_utils
+          GIT_REPOSITORY https://github.com/vixcpp/utils.git
+          GIT_TAG        v0.1.0
+        )
+        FetchContent_MakeAvailable(vix_utils)
+      else()
+        message(FATAL_ERROR
+          "vix::utils not found. Enable VIX_LOG_FETCH_UTILS=ON, install vix_utils, or provide the target before log."
+        )
+      endif()
     endif()
   endif()
 endif()
