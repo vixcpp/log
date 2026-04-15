@@ -42,9 +42,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # --------------------------------------------------------------------
 # Umbrella build policy:
 # When building inside the Vix umbrella, dependencies are managed by the
-# umbrella (add_subdirectory order + options). Log must not FetchContent
-# nor add sibling subdirectories in umbrella mode.
+# umbrella. In that mode, log must not auto-fetch utils.
 # --------------------------------------------------------------------
+option(VIX_LOG_FETCH_UTILS "Auto-fetch vix::utils if missing" ON)
+
 if (DEFINED VIX_UMBRELLA_BUILD AND VIX_UMBRELLA_BUILD)
   set(VIX_LOG_FETCH_UTILS OFF CACHE BOOL "Auto-fetch vix::utils if missing" FORCE)
 endif()
@@ -57,11 +58,23 @@ file(GLOB_RECURSE LOG_SOURCES CONFIGURE_DEPENDS
 # Utils dependency
 if (NOT TARGET vix::utils AND NOT TARGET vix_utils)
   if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/../utils/CMakeLists.txt")
-    message(STATUS "[log] Adding utils from umbrella: ../utils")
+    message(STATUS "[log] Adding utils from sibling: ../utils")
     add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/../utils" "utils")
-  elseif (VIX_LOG_FETCH_UTILS)
+  endif()
+
+  if (NOT TARGET vix::utils AND NOT TARGET vix_utils)
     find_package(vix_utils CONFIG QUIET)
     find_package(utils CONFIG QUIET)
+  endif()
+
+  if (NOT TARGET vix::utils AND NOT TARGET vix_utils AND VIX_LOG_FETCH_UTILS)
+    include(FetchContent)
+    message(STATUS "[log] Fetching vix::utils via FetchContent")
+    FetchContent_Declare(vix_utils
+      GIT_REPOSITORY https://github.com/vixcpp/utils.git
+      GIT_TAG        v0.1.0
+    )
+    FetchContent_MakeAvailable(vix_utils)
   endif()
 endif()
 
