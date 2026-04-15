@@ -85,9 +85,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential \
+            cmake \
             ninja-build \
             pkg-config \
-            git
+            git \
+            libspdlog-dev \
+            libfmt-dev
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
@@ -95,7 +98,11 @@ jobs:
         run: |
           set -euxo pipefail
           brew update
-          brew install ninja || true
+          brew install \
+            cmake \
+            ninja \
+            spdlog \
+            fmt || true
 
       - name: Configure and build utils (Unix)
         if: runner.os != 'Windows'

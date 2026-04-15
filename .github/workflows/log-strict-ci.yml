@@ -36,6 +36,8 @@ env:
     valgrind
     pkg-config
     git
+    libspdlog-dev
+    libfmt-dev
   BUILD_JOBS: 2
   VIX_GIT_BRANCH: dev
 
