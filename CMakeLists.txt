@@ -56,18 +56,21 @@ file(GLOB_RECURSE LOG_SOURCES CONFIGURE_DEPENDS
 )
 
 # Utils dependency
-if (NOT TARGET vix::utils AND NOT TARGET vix_utils)
-  if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/../utils/CMakeLists.txt")
-    message(STATUS "[log] Adding utils from sibling: ../utils")
+if (NOT TARGET vix::utils AND NOT TARGET vix_utils AND NOT TARGET utils)
+  if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/utils/CMakeLists.txt")
+    message(STATUS "[log] Adding utils from local sibling: ./utils")
+    add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/utils" "utils")
+  elseif (EXISTS "${CMAKE_CURRENT_LIST_DIR}/../utils/CMakeLists.txt")
+    message(STATUS "[log] Adding utils from parent sibling: ../utils")
     add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/../utils" "utils")
   endif()
 
-  if (NOT TARGET vix::utils AND NOT TARGET vix_utils)
+  if (NOT TARGET vix::utils AND NOT TARGET vix_utils AND NOT TARGET utils)
     find_package(vix_utils CONFIG QUIET)
     find_package(utils CONFIG QUIET)
   endif()
 
-  if (NOT TARGET vix::utils AND NOT TARGET vix_utils AND VIX_LOG_FETCH_UTILS)
+  if (NOT TARGET vix::utils AND NOT TARGET vix_utils AND NOT TARGET utils AND VIX_LOG_FETCH_UTILS)
     include(FetchContent)
     message(STATUS "[log] Fetching vix::utils via FetchContent")
     FetchContent_Declare(vix_utils
@@ -83,12 +86,16 @@ if (TARGET vix::utils)
   set(VIX_UTILS_TARGET vix::utils)
 elseif (TARGET vix_utils)
   set(VIX_UTILS_TARGET vix_utils)
+elseif (TARGET utils)
+  set(VIX_UTILS_TARGET utils)
 endif()
 
 if (NOT VIX_UTILS_TARGET)
   message(FATAL_ERROR
     "vix::utils not found.\n"
-    "Provide ../utils in the umbrella build, or install/export the utils package."
+    "Searched in ./utils, ../utils, installed packages (vix_utils / utils), "
+    "and optional FetchContent.\n"
+    "Provide utils in the umbrella build, or install/export the utils package."
   )
 endif()
 
