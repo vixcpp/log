@@ -25,7 +25,8 @@
 #   - vix::utils
 #
 # Installation/Export:
-#   Installs into the umbrella export-set `VixTargets`.
+#   - Umbrella build exports into: VixTargets
+#   - Standalone build exports into: vix_logTargets
 # ====================================================================
 
 cmake_minimum_required(VERSION 3.20)
@@ -34,10 +35,21 @@ project(vix_log VERSION 0.1.0 LANGUAGES CXX)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
+# --------------------------------------------------------------------
 # Global settings
+# --------------------------------------------------------------------
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# --------------------------------------------------------------------
+# Export set selection
+# --------------------------------------------------------------------
+if (DEFINED VIX_UMBRELLA_BUILD AND VIX_UMBRELLA_BUILD)
+  set(VIX_LOG_EXPORT_SET VixTargets)
+else()
+  set(VIX_LOG_EXPORT_SET vix_logTargets)
+endif()
 
 # --------------------------------------------------------------------
 # Umbrella build policy:
@@ -50,12 +62,16 @@ if (DEFINED VIX_UMBRELLA_BUILD AND VIX_UMBRELLA_BUILD)
   set(VIX_LOG_FETCH_UTILS OFF CACHE BOOL "Auto-fetch vix::utils if missing" FORCE)
 endif()
 
+# --------------------------------------------------------------------
 # Sources discovery
+# --------------------------------------------------------------------
 file(GLOB_RECURSE LOG_SOURCES CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
 
+# --------------------------------------------------------------------
 # Utils dependency
+# --------------------------------------------------------------------
 set(VIX_UTILS_TARGET "")
 
 # 1) Reuse already available umbrella/local target
@@ -131,7 +147,9 @@ if (NOT VIX_UTILS_TARGET)
   )
 endif()
 
-# STATIC
+# --------------------------------------------------------------------
+# Library target
+# --------------------------------------------------------------------
 if (LOG_SOURCES)
   message(STATUS "[log] Building STATIC library with detected sources.")
 
@@ -151,12 +169,13 @@ if (LOG_SOURCES)
       ${VIX_UTILS_TARGET}
   )
 
+  # Build-only helpers must not leak into exported interfaces.
   if (TARGET vix_warnings)
-    target_link_libraries(vix_log PUBLIC vix_warnings)
+    target_link_libraries(vix_log PRIVATE vix_warnings)
   endif()
 
   if (VIX_ENABLE_SANITIZERS AND TARGET vix_sanitizers)
-    target_link_libraries(vix_log PUBLIC vix_sanitizers)
+    target_link_libraries(vix_log PRIVATE vix_sanitizers)
   endif()
 
   set_target_properties(vix_log PROPERTIES
@@ -167,14 +186,13 @@ if (LOG_SOURCES)
   )
 
   install(TARGETS vix_log
-    EXPORT VixTargets
+    EXPORT ${VIX_LOG_EXPORT_SET}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )
 
-# HEADER-ONLY
 else()
   message(STATUS "[log] Building HEADER-ONLY library (no sources).")
 
@@ -192,49 +210,60 @@ else()
     ${VIX_UTILS_TARGET}
   )
 
-  if (VIX_ENABLE_SANITIZERS AND TARGET vix_sanitizers)
-    target_link_libraries(vix_log INTERFACE vix_sanitizers)
-  endif()
-
   install(TARGETS vix_log
-    EXPORT VixTargets
+    EXPORT ${VIX_LOG_EXPORT_SET}
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )
 
 endif()
 
+# --------------------------------------------------------------------
 # Install headers
+# --------------------------------------------------------------------
 if (NOT (DEFINED VIX_UMBRELLA_BUILD AND VIX_UMBRELLA_BUILD))
-  install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-          FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h")
+  install(DIRECTORY include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING
+      PATTERN "*.hpp"
+      PATTERN "*.h"
+  )
 endif()
 
-# Package config
-configure_package_config_file(
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/vix_logConfig.cmake.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/vix_logConfig.cmake"
-  INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/vix_log"
-)
+# --------------------------------------------------------------------
+# Standalone package config/export
+# Only for non-umbrella builds
+# --------------------------------------------------------------------
+if (NOT (DEFINED VIX_UMBRELLA_BUILD AND VIX_UMBRELLA_BUILD))
 
-write_basic_package_version_file(
-  "${CMAKE_CURRENT_BINARY_DIR}/vix_logConfigVersion.cmake"
-  VERSION ${PROJECT_VERSION}
-  COMPATIBILITY SameMajorVersion
-)
+  configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/vix_logConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/vix_logConfig.cmake"
+    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/vix_log"
+  )
 
-install(FILES
-  "${CMAKE_CURRENT_BINARY_DIR}/vix_logConfig.cmake"
-  "${CMAKE_CURRENT_BINARY_DIR}/vix_logConfigVersion.cmake"
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/vix_log"
-)
+  write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/vix_logConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+  )
 
-install(EXPORT VixTargets
-  FILE VixTargets.cmake
-  NAMESPACE vix::
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/vix_log"
-)
+  install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/vix_logConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/vix_logConfigVersion.cmake"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/vix_log"
+  )
 
+  install(EXPORT vix_logTargets
+    FILE vix_logTargets.cmake
+    NAMESPACE vix::
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/vix_log"
+  )
+
+endif()
+
+# --------------------------------------------------------------------
 # Tests
+# --------------------------------------------------------------------
 option(VIX_LOG_BUILD_TESTS "Build log module tests" OFF)
 
 if (VIX_LOG_BUILD_TESTS)
@@ -243,7 +272,9 @@ if (VIX_LOG_BUILD_TESTS)
   add_subdirectory(test)
 endif()
 
+# --------------------------------------------------------------------
 # Summary
+# --------------------------------------------------------------------
 message(STATUS "------------------------------------------------------")
 message(STATUS "vix::log configured (${PROJECT_VERSION})")
 if (LOG_SOURCES)
@@ -251,6 +282,7 @@ if (LOG_SOURCES)
 else()
   message(STATUS "Mode: HEADER-ONLY / no sources")
 endif()
+message(STATUS "Export set: ${VIX_LOG_EXPORT_SET}")
 message(STATUS "Utils target: ${VIX_UTILS_TARGET}")
 message(STATUS "Include dir: ${CMAKE_CURRENT_SOURCE_DIR}/include (for <vix/log/...>)")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
