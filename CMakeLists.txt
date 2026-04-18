@@ -169,14 +169,23 @@ if (LOG_SOURCES)
       ${VIX_UTILS_TARGET}
   )
 
-  # Build-only helpers must not leak into exported interfaces.
-  if (TARGET vix_warnings)
-    target_link_libraries(vix_log PRIVATE vix_warnings)
-  endif()
+if (NOT MSVC)
+  target_compile_options(vix_log PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+  )
+endif()
 
-  if (VIX_ENABLE_SANITIZERS AND TARGET vix_sanitizers)
-    target_link_libraries(vix_log PRIVATE vix_sanitizers)
-  endif()
+if (VIX_ENABLE_SANITIZERS AND NOT MSVC)
+  target_compile_options(vix_log PRIVATE
+    -fno-omit-frame-pointer
+    -fsanitize=address,undefined
+  )
+  target_link_options(vix_log PRIVATE
+    -fsanitize=address,undefined
+  )
+endif()
 
   set_target_properties(vix_log PROPERTIES
     OUTPUT_NAME vix_log
