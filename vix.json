@@ -1,0 +1,51 @@
+{
+  "namespace": "vix",
+  "name": "log",
+  "displayName": "Vix Log",
+  "version": "0.2.1",
+  "type": "library",
+  "license": "MIT",
+  "description": "Stable logging facade for Vix C++ projects built on top of the Vix utilities logger.",
+  "repository": "https://github.com/vixcpp/log.git",
+  "documentation": "https://github.com/vixcpp/log#readme",
+  "include": "include",
+  "standard": "c++20",
+  "keywords": [
+    "vix",
+    "cpp",
+    "log",
+    "logging",
+    "diagnostics"
+  ],
+  "authors": [
+    {
+      "name": "Gaspard Kirira"
+    }
+  ],
+  "maintainers": [
+    {
+      "name": "Gaspard Kirira"
+    }
+  ],
+  "exports": {
+    "modules": [
+      "vix::log"
+    ],
+    "namespaces": [
+      "vix::log"
+    ]
+  },
+  "constraints": {
+    "platforms": [
+      "linux",
+      "macos",
+      "windows"
+    ]
+  },
+  "deps": [
+    {
+      "id": "vix/utils",
+      "version": "1.14.7"
+    }
+  ]
+}
