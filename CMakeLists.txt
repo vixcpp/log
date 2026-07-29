@@ -123,7 +123,7 @@ else()
     message(STATUS "[log] Fetching vix::utils via FetchContent")
     FetchContent_Declare(vix_utils
       GIT_REPOSITORY https://github.com/vixcpp/utils.git
-      GIT_TAG        v0.1.0
+      GIT_TAG        v1.5.2
     )
     FetchContent_MakeAvailable(vix_utils)
 
