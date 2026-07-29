@@ -57,9 +57,11 @@ endif()
 # umbrella. In that mode, log must not auto-fetch utils.
 # --------------------------------------------------------------------
 option(VIX_LOG_FETCH_UTILS "Auto-fetch vix::utils if missing" ON)
+option(VIX_LOG_FETCH_THIRD_PARTY "Auto-fetch third-party dependencies needed by fetched vix::utils" ON)
 
 if (DEFINED VIX_UMBRELLA_BUILD AND VIX_UMBRELLA_BUILD)
   set(VIX_LOG_FETCH_UTILS OFF CACHE BOOL "Auto-fetch vix::utils if missing" FORCE)
+  set(VIX_LOG_FETCH_THIRD_PARTY OFF CACHE BOOL "Auto-fetch third-party dependencies needed by fetched vix::utils" FORCE)
 endif()
 
 # --------------------------------------------------------------------
@@ -68,6 +70,55 @@ endif()
 file(GLOB_RECURSE LOG_SOURCES CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
+
+function(vix_log_prepare_utils_third_party)
+  if (TARGET spdlog::spdlog_header_only OR TARGET spdlog::spdlog)
+    if (TARGET fmt::fmt-header-only OR TARGET fmt::fmt)
+      return()
+    endif()
+  endif()
+
+  find_package(fmt CONFIG QUIET)
+  find_package(spdlog CONFIG QUIET)
+
+  if ((TARGET spdlog::spdlog_header_only OR TARGET spdlog::spdlog) AND
+      (TARGET fmt::fmt-header-only OR TARGET fmt::fmt))
+    return()
+  endif()
+
+  if (NOT VIX_LOG_FETCH_THIRD_PARTY)
+    return()
+  endif()
+
+  include(FetchContent)
+
+  if (NOT TARGET fmt::fmt-header-only AND NOT TARGET fmt::fmt)
+    message(STATUS "[log] Fetching fmt for vix::utils")
+    set(FMT_DOC OFF CACHE BOOL "" FORCE)
+    set(FMT_TEST OFF CACHE BOOL "" FORCE)
+    set(FMT_INSTALL ON CACHE BOOL "" FORCE)
+    FetchContent_Declare(vix_fmt
+      GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+      GIT_TAG        10.2.1
+    )
+    FetchContent_MakeAvailable(vix_fmt)
+  endif()
+
+  if (NOT TARGET spdlog::spdlog_header_only AND NOT TARGET spdlog::spdlog)
+    message(STATUS "[log] Fetching spdlog for vix::utils")
+    set(SPDLOG_FMT_EXTERNAL ON CACHE BOOL "" FORCE)
+    set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
+    set(SPDLOG_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(SPDLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(SPDLOG_BUILD_BENCH OFF CACHE BOOL "" FORCE)
+    set(SPDLOG_INSTALL ON CACHE BOOL "" FORCE)
+    FetchContent_Declare(vix_spdlog
+      GIT_REPOSITORY https://github.com/gabime/spdlog.git
+      GIT_TAG        v1.14.1
+    )
+    FetchContent_MakeAvailable(vix_spdlog)
+  endif()
+endfunction()
 
 # --------------------------------------------------------------------
 # Utils dependency
@@ -120,6 +171,7 @@ else()
   # 4) Optional fetch only as last resort
   if (NOT VIX_UTILS_TARGET AND VIX_LOG_FETCH_UTILS)
     include(FetchContent)
+    vix_log_prepare_utils_third_party()
     message(STATUS "[log] Fetching vix::utils via FetchContent")
     FetchContent_Declare(vix_utils
       GIT_REPOSITORY https://github.com/vixcpp/utils.git
