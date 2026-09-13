@@ -300,6 +300,10 @@ else()
   add_library(vix_log INTERFACE)
   add_library(vix::log ALIAS vix_log)
 
+  set_target_properties(vix_log PROPERTIES
+    EXPORT_NAME log
+  )
+
   target_compile_features(vix_log INTERFACE cxx_std_20)
 
   target_include_directories(vix_log INTERFACE
