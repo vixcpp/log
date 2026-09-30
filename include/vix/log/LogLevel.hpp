@@ -23,7 +23,7 @@ namespace vix::log
    * @brief Public logging severity levels for the Vix log module.
    *
    * These values are intentionally stable and map to the underlying
-   * `vix::utils::Logger::Level` values through the log adapter.
+   * implementation level values through the log adapter.
    */
   enum class LogLevel
   {

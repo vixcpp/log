@@ -22,18 +22,17 @@
 #include <vix/log/LogContext.hpp>
 #include <vix/log/LogFormat.hpp>
 #include <vix/log/LogLevel.hpp>
-#include <vix/utils/Logger.hpp>
+#include <vix/log/Logger.hpp>
 
 namespace vix::log
 {
 
   /**
    * @class LogAdapter
-   * @brief Public adapter that bridges `vix::log` to `vix::utils::Logger`.
+   * @brief Public adapter over the canonical Vix logger implementation.
    *
-   * This class does not implement logging itself.
-   * It provides a stable public API for the `vix::log` module while
-   * delegating the actual work to the existing utils logger backend.
+   * This class provides the public `vix::log` API while delegating to the
+   * logging implementation owned by this module.
    */
   class LogAdapter
   {
@@ -172,55 +171,55 @@ namespace vix::log
     template <typename... Args>
     void log(LogLevel level, fmt::format_string<Args...> fmtstr, Args &&...args)
     {
-      backend().log(to_utils_level(level), fmtstr, std::forward<Args>(args)...);
+      backend().log(to_logger_level(level), fmtstr, std::forward<Args>(args)...);
     }
 
     /**
      * @brief Log a formatted message with key/value pairs.
      *
-     * This delegates to `vix::utils::Logger::logf`.
+     * This delegates to the canonical logger implementation.
      */
     template <typename... Args>
     void logf(LogLevel level, const std::string &message, Args &&...kvpairs)
     {
-      backend().logf(to_utils_level(level), message, std::forward<Args>(kvpairs)...);
+      backend().logf(to_logger_level(level), message, std::forward<Args>(kvpairs)...);
     }
 
   private:
     /**
-     * @brief Access the underlying utils logger backend.
+     * @brief Access the underlying logger implementation.
      */
-    [[nodiscard]] static vix::utils::Logger &backend();
+    [[nodiscard]] static Logger &backend();
 
     /**
-     * @brief Convert a public log level to utils logger level.
+     * @brief Convert a public log level to implementation level.
      */
-    [[nodiscard]] static vix::utils::Logger::Level to_utils_level(LogLevel level) noexcept;
+    [[nodiscard]] static Logger::Level to_logger_level(LogLevel level) noexcept;
 
     /**
-     * @brief Convert a utils logger level to public log level.
+     * @brief Convert an implementation level to public log level.
      */
-    [[nodiscard]] static LogLevel from_utils_level(vix::utils::Logger::Level level) noexcept;
+    [[nodiscard]] static LogLevel from_logger_level(Logger::Level level) noexcept;
 
     /**
-     * @brief Convert a public log format to utils logger format.
+     * @brief Convert a public log format to implementation format.
      */
-    [[nodiscard]] static vix::utils::Logger::Format to_utils_format(LogFormat format) noexcept;
+    [[nodiscard]] static Logger::Format to_logger_format(LogFormat format) noexcept;
 
     /**
-     * @brief Convert a utils logger format to public log format.
+     * @brief Convert an implementation format to public log format.
      */
-    [[nodiscard]] static LogFormat from_utils_format(vix::utils::Logger::Format format) noexcept;
+    [[nodiscard]] static LogFormat from_logger_format(Logger::Format format) noexcept;
 
     /**
-     * @brief Convert a public log context to utils logger context.
+     * @brief Convert a public log context to implementation context.
      */
-    [[nodiscard]] static vix::utils::Logger::Context to_utils_context(const LogContext &ctx);
+    [[nodiscard]] static Logger::Context to_logger_context(const LogContext &ctx);
 
     /**
-     * @brief Convert a utils logger context to public log context.
+     * @brief Convert an implementation context to public log context.
      */
-    [[nodiscard]] static LogContext from_utils_context(const vix::utils::Logger::Context &ctx);
+    [[nodiscard]] static LogContext from_logger_context(const Logger::Context &ctx);
   };
 
 } // namespace vix::log

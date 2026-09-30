@@ -26,9 +26,9 @@ namespace vix::log
     return adapter;
   }
 
-  vix::utils::Logger &LogAdapter::backend()
+  Logger &LogAdapter::backend()
   {
-    return vix::utils::Logger::getInstance();
+    return Logger::getInstance();
   }
 
   void LogAdapter::configure(const LogConfig &config)
@@ -40,22 +40,22 @@ namespace vix::log
 
   void LogAdapter::set_level(LogLevel level)
   {
-    backend().setLevel(to_utils_level(level));
+    backend().setLevel(to_logger_level(level));
   }
 
   LogLevel LogAdapter::level() const noexcept
   {
-    return from_utils_level(backend().level());
+    return from_logger_level(backend().level());
   }
 
   bool LogAdapter::enabled(LogLevel level) const noexcept
   {
-    return backend().enabled(to_utils_level(level));
+    return backend().enabled(to_logger_level(level));
   }
 
   void LogAdapter::set_format(LogFormat format)
   {
-    backend().setFormat(to_utils_format(format));
+    backend().setFormat(to_logger_format(format));
   }
 
   void LogAdapter::set_async(bool enable)
@@ -65,7 +65,7 @@ namespace vix::log
 
   void LogAdapter::set_context(LogContext ctx)
   {
-    backend().setContext(to_utils_context(ctx));
+    backend().setContext(to_logger_context(ctx));
   }
 
   void LogAdapter::clear_context()
@@ -75,7 +75,7 @@ namespace vix::log
 
   LogContext LogAdapter::context() const
   {
-    return from_utils_context(backend().getContext());
+    return from_logger_context(backend().getContext());
   }
 
   void LogAdapter::set_level_from_env(std::string_view env_name)
@@ -90,108 +90,108 @@ namespace vix::log
 
   LogLevel LogAdapter::parse_level(std::string_view value)
   {
-    return from_utils_level(vix::utils::Logger::parseLevel(value));
+    return from_logger_level(Logger::parseLevel(value));
   }
 
   LogFormat LogAdapter::parse_format(std::string_view value)
   {
-    return from_utils_format(vix::utils::Logger::parseFormat(value));
+    return from_logger_format(Logger::parseFormat(value));
   }
 
-  vix::utils::Logger::Level LogAdapter::to_utils_level(LogLevel level) noexcept
+  Logger::Level LogAdapter::to_logger_level(LogLevel level) noexcept
   {
-    using UtilsLevel = vix::utils::Logger::Level;
+    using LoggerLevel = Logger::Level;
 
     switch (level)
     {
     case LogLevel::Trace:
-      return UtilsLevel::Trace;
+      return LoggerLevel::Trace;
     case LogLevel::Debug:
-      return UtilsLevel::Debug;
+      return LoggerLevel::Debug;
     case LogLevel::Info:
-      return UtilsLevel::Info;
+      return LoggerLevel::Info;
     case LogLevel::Warn:
-      return UtilsLevel::Warn;
+      return LoggerLevel::Warn;
     case LogLevel::Error:
-      return UtilsLevel::Error;
+      return LoggerLevel::Error;
     case LogLevel::Critical:
-      return UtilsLevel::Critical;
+      return LoggerLevel::Critical;
     case LogLevel::Off:
-      return UtilsLevel::Off;
+      return LoggerLevel::Off;
     }
 
-    return UtilsLevel::Info;
+    return LoggerLevel::Info;
   }
 
-  LogLevel LogAdapter::from_utils_level(vix::utils::Logger::Level level) noexcept
+  LogLevel LogAdapter::from_logger_level(Logger::Level level) noexcept
   {
-    using UtilsLevel = vix::utils::Logger::Level;
+    using LoggerLevel = Logger::Level;
 
     switch (level)
     {
-    case UtilsLevel::Trace:
+    case LoggerLevel::Trace:
       return LogLevel::Trace;
-    case UtilsLevel::Debug:
+    case LoggerLevel::Debug:
       return LogLevel::Debug;
-    case UtilsLevel::Info:
+    case LoggerLevel::Info:
       return LogLevel::Info;
-    case UtilsLevel::Warn:
+    case LoggerLevel::Warn:
       return LogLevel::Warn;
-    case UtilsLevel::Error:
+    case LoggerLevel::Error:
       return LogLevel::Error;
-    case UtilsLevel::Critical:
+    case LoggerLevel::Critical:
       return LogLevel::Critical;
-    case UtilsLevel::Off:
+    case LoggerLevel::Off:
       return LogLevel::Off;
     }
 
     return LogLevel::Info;
   }
 
-  vix::utils::Logger::Format LogAdapter::to_utils_format(LogFormat format) noexcept
+  Logger::Format LogAdapter::to_logger_format(LogFormat format) noexcept
   {
-    using UtilsFormat = vix::utils::Logger::Format;
+    using LoggerFormat = Logger::Format;
 
     switch (format)
     {
     case LogFormat::KV:
-      return UtilsFormat::KV;
+      return LoggerFormat::KV;
     case LogFormat::JSON:
-      return UtilsFormat::JSON;
+      return LoggerFormat::JSON;
     case LogFormat::JSON_PRETTY:
-      return UtilsFormat::JSON_PRETTY;
+      return LoggerFormat::JSON_PRETTY;
     }
 
-    return UtilsFormat::KV;
+    return LoggerFormat::KV;
   }
 
-  LogFormat LogAdapter::from_utils_format(vix::utils::Logger::Format format) noexcept
+  LogFormat LogAdapter::from_logger_format(Logger::Format format) noexcept
   {
-    using UtilsFormat = vix::utils::Logger::Format;
+    using LoggerFormat = Logger::Format;
 
     switch (format)
     {
-    case UtilsFormat::KV:
+    case LoggerFormat::KV:
       return LogFormat::KV;
-    case UtilsFormat::JSON:
+    case LoggerFormat::JSON:
       return LogFormat::JSON;
-    case UtilsFormat::JSON_PRETTY:
+    case LoggerFormat::JSON_PRETTY:
       return LogFormat::JSON_PRETTY;
     }
 
     return LogFormat::KV;
   }
 
-  vix::utils::Logger::Context LogAdapter::to_utils_context(const LogContext &ctx)
+  Logger::Context LogAdapter::to_logger_context(const LogContext &ctx)
   {
-    vix::utils::Logger::Context out;
+    Logger::Context out;
     out.request_id = ctx.request_id;
     out.module = ctx.module;
     out.fields = ctx.fields;
     return out;
   }
 
-  LogContext LogAdapter::from_utils_context(const vix::utils::Logger::Context &ctx)
+  LogContext LogAdapter::from_logger_context(const Logger::Context &ctx)
   {
     LogContext out;
     out.request_id = ctx.request_id;
