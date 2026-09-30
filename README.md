@@ -3,7 +3,7 @@
 The **log module** provides a clean, stable, and high-level logging API
 for Vix applications.
 
-It is built as a **facade** over the internal `vix::utils::Logger`,
+It owns the canonical Vix logging implementation,
 exposing a consistent and developer-friendly interface while reusing
 a powerful logging backend.
 
@@ -28,12 +28,13 @@ The module is designed to be:
 ## Architecture
 
 ```
-vix::utils::Logger → core logging engine
-vix::log           → public facade (this module)
+vix::log::Logger   → logging engine
+vix::log           → public logging capability
 ```
 
 The `log` module does not implement logging itself.
-It delegates all operations to `vix::utils::Logger`.
+Historical `vix::utils::Logger` remains a temporary compatibility alias to
+the canonical implementation.
 
 ## Quick Start
 
@@ -160,4 +161,3 @@ No direct dependency on spdlog is exposed publicly.
 
 MIT
 Part of the Vix.cpp project.
-

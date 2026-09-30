@@ -22,8 +22,8 @@ namespace vix::log
    * @enum LogFormat
    * @brief Public structured logging output formats.
    *
-   * These formats map to the underlying `vix::utils::Logger::Format`
-   * values through the log adapter.
+   * These formats map to the logging implementation format through the
+   * log adapter.
    */
   enum class LogFormat
   {
