@@ -975,9 +975,24 @@ namespace vix::log
      */
     static bool console_sync_enabled()
     {
+#if defined(_WIN32)
+      std::size_t valueSize = 0;
+      char *value = nullptr;
+      const auto status = _dupenv_s(&value, &valueSize, "VIX_CONSOLE_SYNC");
+      if (status != 0 || value == nullptr)
+      {
+        std::free(value);
+        return false;
+      }
+      const std::string_view setting{value};
+      const bool enabled = !setting.empty() && setting != "0" && setting != "false";
+      std::free(value);
+      return enabled;
+#else
       if (const char *v = std::getenv("VIX_CONSOLE_SYNC"); v && *v)
         return std::string_view(v) != "0" && std::string_view(v) != "false";
       return false;
+#endif
     }
   };
 
